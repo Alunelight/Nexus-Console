@@ -3,7 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "uv run uvicorn main:app --reload --port 8000",
-    "lint": "uv run ruff check ."
+    "dev": "uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "uv run uvicorn app.main:app --host 0.0.0.0 --port 8000",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "type-check": "uv run mypy .",
+    "migration:generate": "uv run alembic revision --autogenerate",
+    "migration:upgrade": "uv run alembic upgrade head",
+    "migration:downgrade": "uv run alembic downgrade -1"
   }
 }

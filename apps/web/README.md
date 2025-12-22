@@ -1,73 +1,72 @@
-# React + TypeScript + Vite
+# Nexus Console Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+基于 React 19 + TypeScript 的现代化前端应用。
 
-Currently, two official plugins are available:
+## 技术栈
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React**: 19.x
+- **TypeScript**: 5.x (strict mode)
+- **Vite**: 5.x (使用 Rolldown)
+- **TanStack Query**: v5 (数据获取)
+- **TanStack Router**: latest (路由)
+- **Zustand**: latest (状态管理)
+- **Tailwind CSS**: 3.x/4.x (样式)
+- **React Hook Form**: 7.x (表单)
+- **Zod**: 3.x (验证)
 
-## React Compiler
+## 快速开始
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 安装依赖
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 配置环境变量
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+复制 `.env.example` 到 `.env`：
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
 ```
+
+### 运行开发服务器
+
+```bash
+pnpm dev
+```
+
+应用将在 http://localhost:5173 运行
+
+## 开发命令
+
+```bash
+pnpm dev              # 启动开发服务器
+pnpm build            # 构建生产版本
+pnpm preview          # 预览生产构建
+pnpm lint             # 运行 ESLint
+```
+
+## 项目结构
+
+```
+src/
+├── main.tsx          # 应用入口
+├── App.tsx           # 根组件
+├── routes/           # TanStack Router 路由
+├── components/       # React 组件
+│   └── ui/           # UI 组件
+├── lib/              # 工具函数
+├── stores/           # Zustand 状态
+├── hooks/            # 自定义 Hooks
+└── types/            # TypeScript 类型
+```
+
+## 代码规范
+
+- TypeScript strict mode 启用
+- 使用 TanStack Query 进行数据获取
+- 使用 Zustand 管理客户端状态
+- 使用 Tailwind CSS 编写样式
+- 使用 React Hook Form + Zod 处理表单
+- 禁止使用 Redux、Axios、CSS-in-JS

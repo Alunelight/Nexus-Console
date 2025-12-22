@@ -1,0 +1,11 @@
+- [2025-12-22] feat(api): 添加 FastAPI 应用入口和健康检查端点
+- [2025-12-22] chore(api): 补充依赖并配置 Ruff/MyPy 工具链
+- [2025-12-22] feat(api): 添加应用配置模块（数据库/Redis/CORS/Celery）
+- [2025-12-22] feat(api): 添加数据库模型导出配置
+- [2025-12-22] feat(api): 添加 Pydantic schemas 导出配置
+- [2025-12-22] feat(api): 添加 Alembic 异步迁移环境配置
+- [2025-12-22] feat(web): 添加 User 类型定义（User/UserCreate/UserUpdate）
+- [2025-12-22] feat(web): 添加路径别名配置并增强 TypeScript 类型检查
+- [2025-12-22] chore(api): 增强 npm scripts（添加 start/format/type-check/migration 命令）
+- [2025-12-22] docs(api): 添加 API 项目完整文档（技术栈/快速开始/开发命令）
+- [2025-12-22] docs(root): 完善根目录 README（技术栈/快速开始/项目结构/开发命令）
