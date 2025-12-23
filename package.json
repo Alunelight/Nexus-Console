@@ -11,15 +11,6 @@
     "types:sync": "pnpm --filter api openapi:export && pnpm --filter web api:generate",
     "prepare": "husky"
   },
-  "lint-staged": {
-    "apps/web/**/*.{ts,tsx}": [
-      "pnpm --filter web exec eslint --fix"
-    ],
-    "apps/api/**/*.py": [
-      "cd apps/api && uv run ruff check --fix",
-      "cd apps/api && uv run ruff format"
-    ]
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
