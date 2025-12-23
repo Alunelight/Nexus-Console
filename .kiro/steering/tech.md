@@ -20,6 +20,8 @@
 | Celery     | 5.6+     | 任务队列                                |
 | Redis      | 7.1+     | 缓存                                    |
 | Uvicorn    | latest   | ASGI 服务器 (带 standard 扩展)          |
+| structlog  | latest   | 结构化日志                              |
+| pytest     | latest   | 测试框架                                |
 
 ### 后端禁止使用
 
@@ -43,8 +45,12 @@
 | TanStack Query  | v5       | 数据获取，禁止使用 SWR/Redux    |
 | Zustand         | latest   | 客户端状态，禁止使用 Redux/MobX |
 | Tailwind CSS    | 3.x/4.x  | 样式，禁止使用 CSS-in-JS        |
+| shadcn/ui       | latest   | UI 组件库                       |
 | React Hook Form | 7.x      | 表单，禁止使用 Formik           |
 | Zod             | 3.x      | 验证，禁止使用 Yup/Joi          |
+| date-fns        | latest   | 日期处理，禁止使用 moment.js    |
+| Lucide React    | latest   | 图标库                          |
+| sonner          | latest   | Toast 通知                      |
 
 ### 前端禁止使用
 

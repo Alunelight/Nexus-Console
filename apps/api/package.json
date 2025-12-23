@@ -8,6 +8,8 @@
     "lint": "uv run ruff check .",
     "format": "uv run ruff format .",
     "type-check": "uv run mypy .",
+    "test": "uv run pytest",
+    "test:cov": "uv run pytest --cov --cov-report=html",
     "migration:generate": "uv run alembic revision --autogenerate",
     "migration:upgrade": "uv run alembic upgrade head",
     "migration:downgrade": "uv run alembic downgrade -1",

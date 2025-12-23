@@ -5,13 +5,35 @@
 
 export type ErrorType<Error> = Error;
 
-export const customFetch = async <T>(
-  config: RequestInit & { url: string }
-): Promise<T> => {
-  const { url, ...rest } = config;
+interface CustomFetchConfig extends RequestInit {
+  url: string;
+  data?: unknown;
+  params?: Record<string, unknown>;
+}
 
-  const response = await fetch(url, {
+export const customFetch = async <T>(
+  config: CustomFetchConfig
+): Promise<T> => {
+  const { url, data, params, ...rest } = config;
+
+  // 构建 URL（处理查询参数）
+  let finalUrl = url;
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      finalUrl = `${url}?${queryString}`;
+    }
+  }
+
+  const response = await fetch(finalUrl, {
     ...rest,
+    body: data ? JSON.stringify(data) : rest.body,
     headers: {
       'Content-Type': 'application/json',
       ...rest.headers,
