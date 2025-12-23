@@ -4,17 +4,31 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "turbo test",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "types:sync": "pnpm --filter api openapi:export && pnpm --filter web api:generate"
+    "types:sync": "pnpm --filter api openapi:export && pnpm --filter web api:generate",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx}": [
+      "pnpm --filter web exec eslint --fix"
+    ],
+    "apps/api/**/*.py": [
+      "cd apps/api && uv run ruff check --fix",
+      "cd apps/api && uv run ruff format"
+    ]
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa",
   "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "turbo": "^2.7.1"
   },
   "pnpm": {

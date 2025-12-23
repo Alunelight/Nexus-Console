@@ -1,7 +1,14 @@
 """FastAPI application entry point."""
 
-from fastapi import FastAPI
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.api.v1.router import api_router
 from app.config import settings
@@ -11,39 +18,56 @@ from app.core.logging import configure_logging, get_logger
 configure_logging()
 logger = get_logger(__name__)
 
+# Configure rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """Application lifespan events."""
+    # Startup
+    logger.info("application_startup", version=settings.app_version, debug=settings.debug)
+
+    # 验证生产环境配置
+    if not settings.debug:
+        logger.info("production_mode_enabled", secret_key_length=len(settings.secret_key))
+
+    yield
+
+    # Shutdown
+    logger.info("application_shutdown")
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     debug=settings.debug,
+    lifespan=lifespan,
 )
+
+# Add rate limiter state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # 明确指定允许的方法
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin"],  # 明确指定允许的头
 )
+
+# Add GZip compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include API router
 app.include_router(api_router, prefix="/api")
 
 
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Application startup event."""
-    logger.info("application_startup", version=settings.app_version)
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Application shutdown event."""
-    logger.info("application_shutdown")
-
-
 @app.get("/")
-async def root() -> dict[str, str]:
+@limiter.limit("10/minute")
+async def root(request: Request) -> dict[str, str]:
     """Root endpoint."""
     return {"message": "Welcome to Nexus Console API", "version": settings.app_version}
 

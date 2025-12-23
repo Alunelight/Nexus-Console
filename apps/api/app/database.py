@@ -7,11 +7,15 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
-# Create async engine
+# Create async engine with connection pool configuration
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     future=True,
+    pool_size=20,  # 连接池大小
+    max_overflow=10,  # 最大溢出连接
+    pool_pre_ping=True,  # 连接健康检查
+    pool_recycle=3600,  # 连接回收时间（秒）
 )
 
 # Create async session factory
