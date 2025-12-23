@@ -10,6 +10,7 @@
     "type-check": "uv run mypy .",
     "migration:generate": "uv run alembic revision --autogenerate",
     "migration:upgrade": "uv run alembic upgrade head",
-    "migration:downgrade": "uv run alembic downgrade -1"
+    "migration:downgrade": "uv run alembic downgrade -1",
+    "openapi:export": "uv run python scripts/export_openapi.py"
   }
 }

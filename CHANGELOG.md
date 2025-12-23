@@ -9,3 +9,20 @@
 - [2025-12-22] chore(api): 增强 npm scripts（添加 start/format/type-check/migration 命令）
 - [2025-12-22] docs(api): 添加 API 项目完整文档（技术栈/快速开始/开发命令）
 - [2025-12-22] docs(root): 完善根目录 README（技术栈/快速开始/项目结构/开发命令）
+- [2025-12-22] feat(types): 实现前后端类型同步自动化机制 ⭐
+  - 创建后端 OpenAPI 导出脚本 (apps/api/scripts/export_openapi.py)
+  - 安装并配置 Orval 代码生成器 (apps/web/orval.config.ts)
+  - 创建自定义 Fetch 客户端 (apps/web/src/api/client.ts)
+  - 添加一键同步命令 `pnpm types:sync`
+  - 自动生成 TanStack Query Hooks 和 TypeScript 类型
+  - 创建使用示例 (apps/web/src/examples/UserList.tsx)
+  - 编写详细文档 (docs/TYPE_SYNC.md)
+  - 添加 Steering 规则 (.kiro/steering/type-sync.md)
+  - 更新 .gitignore 忽略生成的文件
+- [2025-12-22] chore(api): 添加 OpenAPI 导出脚本命令
+- [2025-12-22] chore(web): 添加 Orval API 客户端生成脚本命令
+- [2025-12-22] fix(api): 修复 OpenAPI 导出脚本的模块导入路径问题
+- [2025-12-22] docs(root): 添加前后端类型同步自动化完整文档
+- [2025-12-22] docs(root): 在 README 中添加类型同步文档链接
+- [2025-12-22] refactor(docs): 整理 CHANGELOG 类型同步相关条目为单一功能条目
+- [2025-12-22] docs(root): 补充依赖管理规范说明（Orval 应安装在根目录）

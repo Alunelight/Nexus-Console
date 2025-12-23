@@ -1,17 +1,27 @@
-# 当前任务：项目初始化全面检查
+# 当前任务：实现前后端类型同步自动化 ✅
 
 ## 目标
 
-验证 Nexus-Console 项目是否符合 Python 异步项目规范和技术栈要求
+建立基于 OpenAPI 规范的前后端类型同步机制，使用 Orval 自动生成类型安全的前端客户端代码。
 
-## 进度
+## 完成状态
 
-✅ 已完成所有修复工作
+- ✅ 创建后端 OpenAPI 导出脚本
+- ✅ 安装并配置 Orval
+- ✅ 创建自定义 Fetch 客户端
+- ✅ 集成到 npm scripts
+- ✅ 测试完整工作流
+- ✅ 创建使用示例
+- ✅ 编写详细文档
+- ✅ 更新 README
+- ✅ 创建 Steering 规则
 
-## 完成项
+## 已实现功能
 
-1. ✅ 创建完整的后端项目结构（app/ 目录及所有子模块）
-2. ✅ 补充所有缺失依赖（httpx, ruff, mypy, alembic, pydantic[email]）
-3. ✅ 添加所有配置文件（Ruff, MyPy, 环境变量, Alembic）
-4. ✅ 配置前端 Tailwind CSS 和所有依赖
-5. ✅ 代码检查通过（Ruff, TypeScript）
+1. **后端导出**: `pnpm --filter api openapi:export`
+2. **前端生成**: `pnpm --filter web api:generate`
+3. **一键同步**: `pnpm types:sync`
+4. **类型安全**: 完整的 TypeScript 类型支持
+5. **TanStack Query**: 自动生成 Hooks
+
+## 任务完成 🎉

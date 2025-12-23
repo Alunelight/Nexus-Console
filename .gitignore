@@ -284,6 +284,11 @@ temp/
 .ai/*.tmp
 .ai/*.temp
 
+# OpenAPI 生成的文件
+apps/api/openapi/
+apps/web/src/api/endpoints/
+apps/web/src/api/models/
+
 # ============================================
 # Security
 # ============================================

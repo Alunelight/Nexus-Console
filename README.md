@@ -78,18 +78,39 @@ nexus-console/
 pnpm dev              # 启动所有应用
 pnpm build            # 构建所有应用
 pnpm lint             # 检查所有应用
+pnpm types:sync       # 同步前后端类型（OpenAPI → TypeScript）
 
 # 后端 (apps/api)
 pnpm dev              # 启动开发服务器
 pnpm lint             # 代码检查
 pnpm format           # 代码格式化
 pnpm type-check       # 类型检查
+pnpm openapi:export   # 导出 OpenAPI 规范
 
 # 前端 (apps/web)
 pnpm dev              # 启动开发服务器
 pnpm build            # 构建生产版本
 pnpm lint             # ESLint 检查
+pnpm api:generate     # 从 OpenAPI 生成 API 客户端
 ```
+
+## 前后端类型同步
+
+本项目实现了自动化的前后端类型同步机制：
+
+```bash
+# 一键同步前后端类型
+pnpm types:sync
+```
+
+工作流程：
+
+1. 后端通过 Pydantic 模型和 FastAPI 路由定义 API
+2. 导出 OpenAPI 规范 (`openapi.json`)
+3. Orval 读取规范并生成类型安全的 TypeScript 客户端
+4. 前端获得完整的类型支持和 TanStack Query Hooks
+
+详细文档：[前后端类型同步](docs/TYPE_SYNC.md)
 
 ## 开发环境要求
 
@@ -102,6 +123,7 @@ pnpm lint             # ESLint 检查
 
 ## 文档
 
+- [前后端类型同步](docs/TYPE_SYNC.md) ⭐
 - [后端文档](apps/api/README.md)
 - [前端文档](apps/web/README.md)
 - [技术栈说明](.kiro/steering/tech.md)
