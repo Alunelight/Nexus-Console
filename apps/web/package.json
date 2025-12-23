@@ -12,7 +12,12 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "playwright:install": "playwright install --with-deps"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -34,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tanstack/router-devtools": "^1.142.11",
@@ -55,6 +61,7 @@
     "jsdom": "^27.3.0",
     "orval": "^7.17.2",
     "postcss": "^8.5.6",
+    "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.1.18",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
