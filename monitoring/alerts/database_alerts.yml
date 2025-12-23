@@ -1,0 +1,54 @@
+# 数据库告警规则
+groups:
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL 宕机
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 数据库宕机"
+          description: "PostgreSQL 已宕机超过 1 分钟"
+
+      # 连接数过高
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "数据库连接数过高"
+          description: "当前连接数: {{ $value }}"
+
+      # 慢查询过多
+      - alert: SlowQueries
+        expr: rate(pg_stat_statements_mean_time_seconds[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "数据库慢查询过多"
+          description: "平均查询时间超过 1 秒"
+
+      # Redis 宕机
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 服务宕机"
+          description: "Redis 已宕机超过 1 分钟"
+
+      # Redis 内存使用过高
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis 内存使用率过高"
+          description: "内存使用率超过 90%"

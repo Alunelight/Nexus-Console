@@ -1,0 +1,44 @@
+# API 告警规则
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # API 服务宕机
+      - alert: APIDown
+        expr: up{job="api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API 服务宕机"
+          description: "API 服务已宕机超过 1 分钟"
+
+      # 高错误率
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 错误率过高"
+          description: "5xx 错误率超过 5%"
+
+      # 高响应时间
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 响应时间过长"
+          description: "95% 请求响应时间超过 1 秒"
+
+      # 高内存使用
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes{name="api"} / container_spec_memory_limit_bytes{name="api"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 内存使用率过高"
+          description: "内存使用率超过 90%"

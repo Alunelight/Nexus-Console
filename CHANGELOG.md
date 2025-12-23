@@ -225,3 +225,52 @@
   - 实现分页响应模型
   - 创建完整的组件示例
   - 项目已达到生产就绪标准
+- [2025-12-23] docs: 创建核心文档（第三阶段 Week 5 开始）📚
+  - 创建 CONTRIBUTING.md 贡献指南
+    - 开发流程说明
+    - 代码规范（前端/后端）
+    - 测试要求（覆盖率标准）
+    - 类型同步工作流
+    - 提交规范（Conventional Commits）
+    - Pull Request 流程
+    - Code Review 检查清单
+  - 创建 SECURITY.md 安全政策
+    - 支持的版本说明
+    - 漏洞报告流程
+    - 安全最佳实践（8 个方面）
+    - 已实施的安全措施
+    - 安全审计历史
+  - 创建 docs/DEPLOYMENT.md 部署文档
+    - 部署前准备（系统要求）
+    - Docker 部署完整流程
+    - 环境变量配置详解
+    - 数据库迁移指南
+    - 监控和日志配置
+    - 故障排查手册（6 个常见问题）
+    - 性能优化建议
+    - 安全加固措施
+- [2025-12-23] feat(monitoring): 配置完整的监控和日志系统 📊
+  - 创建 Prometheus 配置（monitoring/prometheus.yml）
+    - 配置 API、PostgreSQL、Redis、系统指标抓取
+    - 设置 15 秒抓取间隔
+    - 配置告警管理器集成
+  - 创建告警规则
+    - API 告警：服务宕机、高错误率、高响应时间、高内存使用
+    - 数据库告警：PostgreSQL/Redis 宕机、连接数过高、慢查询、内存使用
+  - 创建 Grafana 仪表板配置
+    - API Dashboard：请求速率、响应时间、错误率、活跃连接
+  - 创建 docker-compose.monitoring.yml
+    - Prometheus - 指标收集
+    - Grafana - 可视化仪表板
+    - Node Exporter - 系统指标
+    - cAdvisor - 容器指标
+    - Postgres Exporter - PostgreSQL 指标
+    - Redis Exporter - Redis 指标
+  - 创建 docs/MONITORING.md 监控文档
+    - 监控架构说明
+    - 快速开始指南
+    - Prometheus/Grafana 配置
+    - 告警规则说明
+    - 日志管理
+    - 常用查询示例
+    - 故障排查

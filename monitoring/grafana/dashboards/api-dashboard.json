@@ -1,0 +1,48 @@
+{
+  "dashboard": {
+    "title": "Nexus Console API Dashboard",
+    "tags": ["api", "fastapi"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "请求速率",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ]
+      },
+      {
+        "title": "响应时间 (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95"
+          }
+        ]
+      },
+      {
+        "title": "错误率",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx Errors"
+          }
+        ]
+      },
+      {
+        "title": "活跃连接数",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "http_connections_active"
+          }
+        ]
+      }
+    ]
+  }
+}
