@@ -4,14 +4,22 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.router import api_router
 from app.config import settings
+from app.core.cache import close_cache, init_cache
+from app.core.errors import (
+    generic_exception_handler,
+    integrity_error_handler,
+    validation_exception_handler,
+)
 from app.core.logging import configure_logging, get_logger
 
 # Configure structured logging
@@ -32,9 +40,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     if not settings.debug:
         logger.info("production_mode_enabled", secret_key_length=len(settings.secret_key))
 
+    # 初始化缓存
+    await init_cache()
+
     yield
 
     # Shutdown
+    await close_cache()
     logger.info("application_shutdown")
 
 
@@ -48,6 +60,11 @@ app = FastAPI(
 # Add rate limiter state
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add error handlers
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Configure CORS
 app.add_middleware(

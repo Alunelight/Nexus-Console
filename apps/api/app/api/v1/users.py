@@ -3,6 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi_cache.decorator import cache
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +37,7 @@ async def create_user(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
+@cache(expire=300)  # 缓存 5 分钟
 async def get_user(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -48,6 +50,7 @@ async def get_user(
 
 
 @router.get("/", response_model=list[UserResponse])
+@cache(expire=60)  # 缓存 1 分钟
 async def list_users(
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = 0,
