@@ -1,3 +1,45 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## 1.1.0 (2025-12-23)
+
+
+### 🔧 Chores
+
+* **ci:** 移除冗余的GitHub Actions测试工作流配置 ([48d40eb](https://github.com/Alunelight/Nexus-Console/commit/48d40eb2959b93e418081a257a498a5f8fefeb3c))
+* **gitignore:** 优化和整理.gitignore文件 ([bc83d55](https://github.com/Alunelight/Nexus-Console/commit/bc83d55523408bc4b3562c71a1da4addc9578194))
+* **package:** 统一项目名称的大小写 ([37f31cf](https://github.com/Alunelight/Nexus-Console/commit/37f31cf40118aeef8efd82d3d9a4587a60585591))
+* **project:** 完成审计报告改进方案第二阶段 ([fbdb708](https://github.com/Alunelight/Nexus-Console/commit/fbdb708f982ef3b5ccec94db32d69a6d9e5ea9ff))
+* **steering:** 添加项目规则与技术栈指导文档 ([b5ca4bf](https://github.com/Alunelight/Nexus-Console/commit/b5ca4bf43845431bac7a2935a5ee088b26b999ef))
+* 优化 lint-staged 配置 ([6c13219](https://github.com/Alunelight/Nexus-Console/commit/6c13219568d0d7fa0067119c2810e9e0edadf877))
+
+
+### 🐛 Bug Fixes
+
+* **ci:** 修复 pnpm 版本冲突错误 ([672524f](https://github.com/Alunelight/Nexus-Console/commit/672524f487afa78a72307c955321532a14c6973c))
+* **ci:** 修复后端依赖安装命令 ([c2359bf](https://github.com/Alunelight/Nexus-Console/commit/c2359bfaf408a926aa792e667fd58690e3ee8afc))
+* **ci:** 修复所有 CI 检查错误 ([4d3e2f8](https://github.com/Alunelight/Nexus-Console/commit/4d3e2f867ccdabdf36631a1c7dac0b26b3f5d19c))
+* 修复 lint-staged、husky 和 commitlint 配置 ([bab8606](https://github.com/Alunelight/Nexus-Console/commit/bab86066f8c84b42da17bf39180a4d2b24ff3ffb))
+
+
+### ✨ Features
+
+* **api:** 初始化 FastAPI 异步后端项目结构与基础功能 ([765e957](https://github.com/Alunelight/Nexus-Console/commit/765e957513e5cbb5cbcc7c725ac1ecbda6c3c2d1))
+* **api:** 初始化 FastAPI 服务及基础配置 ([66eff66](https://github.com/Alunelight/Nexus-Console/commit/66eff666241dc06055fbf97efad4108a645ecc96))
+* **api:** 实现 Redis 缓存及错误处理中间件，添加分页模型并提升测试覆盖率 ([31f22f1](https://github.com/Alunelight/Nexus-Console/commit/31f22f1d0872360ba1eb66988a88fd0eea7c492a))
+* **api:** 添加结构化日志和测试框架支持 ([866565f](https://github.com/Alunelight/Nexus-Console/commit/866565f515ccda113974c872a07e309dc93964ee))
+* **audit:** 完成 Nexus Console 项目全面审计报告 ([ce76c95](https://github.com/Alunelight/Nexus-Console/commit/ce76c951736bf6379c67ca11ef24ea94cb1267dd))
+* **e2e:** 实现 Playwright E2E 测试框架和用例 ([5210e32](https://github.com/Alunelight/Nexus-Console/commit/5210e32596d88ea8d5c8df6295e79f7617269999))
+* **type-sync:** 实现前后端类型同步自动化机制 ([888dfb3](https://github.com/Alunelight/Nexus-Console/commit/888dfb3fcaeb59f139b1c513917cae251fa83355))
+* 实现项目配置改进建议 ([80a9d1a](https://github.com/Alunelight/Nexus-Console/commit/80a9d1a8cdbacce4c8fddf2e53088a84f649defb))
+
+
+### 📚 Documentation
+
+* **contributing:** 完善贡献指南文档 ([8e6a97d](https://github.com/Alunelight/Nexus-Console/commit/8e6a97d3812cb9b8d612dbb8b77dc7632771b702))
+* 创建 CHANGELOG 自动化使用指南 📚 ([1dbeeda](https://github.com/Alunelight/Nexus-Console/commit/1dbeeda73bdcce935727a5f1ebe651ab4328dd8d))
+
 - [2025-12-22] feat(api): 添加 FastAPI 应用入口和健康检查端点
 - [2025-12-22] chore(api): 补充依赖并配置 Ruff/MyPy 工具链
 - [2025-12-22] feat(api): 添加应用配置模块（数据库/Redis/CORS/Celery）
