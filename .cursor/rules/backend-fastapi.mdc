@@ -1,0 +1,59 @@
+---
+description: 后端 FastAPI / SQLAlchemy / Pydantic 规则（apps/api）
+globs: apps/api/app/**/*.py
+alwaysApply: false
+---
+
+## Backend FastAPI / SQLAlchemy / Pydantic 规则
+
+本文件用于指导 Cursor 在 `apps/api` 下编写和修改后端代码时遵循本项目约定和 FastAPI 官方最佳实践。
+
+- 适用范围：`apps/api/app` 内的 `main.py`、`api/v1/*`、`models/*`、`schemas/*` 等。
+- 优先级：当与通用 Python 规则冲突时，以本文件为准。
+
+### 总体约定
+
+- 使用 **FastAPI** 作为 Web 框架，所有路由必须是 `async def`。
+- 使用 **SQLAlchemy 2.0 async**（`AsyncSession`, `async_sessionmaker`，`Mapped` + `mapped_column`）。
+- 使用 **Pydantic v2**（`model_config = ConfigDict(...)`，`from_attributes=True`），禁止 v1 风格 `class Config`.
+- HTTP 客户端统一使用 **httpx.AsyncClient**，禁止 `requests`。
+
+### 路由与依赖注入
+
+- 在 `app/api/v1` 下：每个资源一个 `APIRouter`，统一由 `router.py` 聚合并挂载到 `main.py`：
+  - `main.py` 使用 `app.include_router(api_router, prefix="/api")`。
+  - `api/v1/router.py` 使用 `api_router = APIRouter(prefix="/v1")` 并在其中 `include_router` 各子模块（如 `users.router`）。
+- 依赖注入写法遵循 FastAPI 官方推荐：
+  - 使用 `typing.Annotated` + `Depends`：
+    - `db: Annotated[AsyncSession, Depends(get_db)]`
+- 错误处理：
+  - 资源未找到时抛 `HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="...")`。
+  - 违反唯一约束（如用户邮箱重复）时抛 `HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="...")`。
+
+### SQLAlchemy 2.0 模型与会话
+
+- 模型：
+  - 使用 `DeclarativeBase` 和 `Mapped`/`mapped_column` 定义字段。
+  - 字段类型使用 Python 3.13 的联合类型写法：`str | None`。
+- 会话：
+  - 使用 `AsyncSession` 和 `async with` 进行生命周期管理。
+  - 在路由中只能通过依赖注入获取 `AsyncSession`，禁止手动创建引擎或 Session。
+
+### Pydantic v2 Schema
+
+- 输入与输出模型必须分离（例如：`UserCreate`, `UserUpdate`, `UserResponse`）。
+- 模型配置：
+  - 使用 `ConfigDict`：
+    - `model_config = ConfigDict(strict=True)`（输入校验场景）。
+    - `model_config = ConfigDict(from_attributes=True)`（响应模型）。
+- 在路由上使用 `response_model=UserResponse`/`list[UserResponse]` 以保证返回类型安全。
+
+### 缓存与限流
+
+- 限流：
+  - 在 `main.py` 中统一配置 `slowapi.Limiter` 并通过装饰器（如 `@limiter.limit("10/minute")`）应用到路由。
+- 缓存：
+  - 优先使用 `fastapi-cache2` 提供的装饰器：
+    - 在只读接口（如 `GET /users/{id}`, `GET /users`）上使用 `@cache(expire=60)`/`@cache(expire=300)`。
+  - 不在写操作（`POST`/`PATCH`/`DELETE`）上使用缓存。
+

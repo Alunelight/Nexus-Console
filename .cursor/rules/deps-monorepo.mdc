@@ -1,0 +1,59 @@
+---
+description: Monorepo 依赖管理规则（pnpm workspace + uv）
+globs: "**/package.json"
+alwaysApply: false
+---
+
+## Monorepo 依赖管理规则（pnpm + uv）
+
+本文件将 `.kiro/steering/dependency-management.md` 中的依赖规范提炼为 Cursor 可执行的规则。
+
+- 适用范围：安装、更新、删除前后端依赖；修改 `package.json`、`pyproject.toml`。
+- 优先级：当与其他说明冲突时，以本文件为准。
+
+### 总体原则
+
+1. Node 依赖使用 **pnpm**，Python 依赖使用 **uv**。
+2. 依赖应安装在**实际使用它的包**中（就近原则）。
+3. 根目录只放 Monorepo 工具依赖（例如 `turbo`、`husky`、`lint-staged`）。
+
+### 前端依赖（apps/web）
+
+- 安装生产依赖：
+  - `pnpm --filter web add <package>`
+- 安装开发依赖：
+  - `pnpm --filter web add -D <package>`
+- 常见示例：
+  - `pnpm --filter web add @tanstack/react-query`
+  - `pnpm --filter web add -D orval`
+  - `pnpm --filter web add -D @types/node`
+
+### 后端依赖（apps/api）
+
+- **禁止**使用 `pip` 或 `poetry` 安装依赖。
+- 必须在 `apps/api` 中使用 `uv`：
+  - 生产依赖：`cd apps/api && uv add <package>`
+  - 开发依赖：`cd apps/api && uv add --dev <package>`
+- 常见示例：
+  - `uv add fastapi`
+  - `uv add sqlalchemy[asyncio]`
+  - `uv add --dev ruff mypy pytest pytest-asyncio`
+
+### 根目录依赖（Monorepo 工具）
+
+- 仅在根目录安装 Monorepo 管理工具：
+  - `pnpm add -D turbo -w`
+  - 其它如 `husky`、`lint-staged` 已在根 `package.json` 中配置时，可统一放在根目录。
+- 不在根目录安装应用级依赖（如 `react`、`fastapi`、`vite` 等）。
+
+### Cursor 安装依赖时的决策流程
+
+当用户指示“安装某依赖”时，Cursor 应按以下顺序判断：
+
+1. **这是前端构建/UI/状态相关依赖吗？**
+   - 是 → 使用 `pnpm --filter web add` 或 `-D`。
+2. **这是后端 Python 依赖吗？**
+   - 是 → 在 `apps/api` 使用 `uv add` 或 `uv add --dev`。
+3. **这是 Monorepo 管理工具吗？**
+   - 是 → 在根目录使用 `pnpm add -D <package> -w`。
+

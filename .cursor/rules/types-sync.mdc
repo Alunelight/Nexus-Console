@@ -1,0 +1,42 @@
+---
+description: 后端与前端之间的 OpenAPI → orval → TypeScript 类型同步规则
+globs: "apps/**"
+alwaysApply: false
+---
+
+## 类型同步与 API Client 生成规则（OpenAPI + orval）
+
+本文件约束后端与前端之间的类型同步流程，确保接口变更可以通过 OpenAPI → orval → TypeScript 一致传播。
+
+- 适用范围：修改后端 API、前端 API 调用、生成/更新类型。
+- 相关脚本：
+  - 根 `package.json`：`"types:sync": "pnpm --filter api openapi:export && pnpm --filter web api:generate"`
+  - `apps/web/package.json`：`"api:generate": "orval --config orval.config.ts"`
+
+### 标准同步流程
+
+当接口或数据结构发生变更时，Cursor 应遵循以下步骤：
+
+1. **更新后端**（apps/api）
+   - 修改 Pydantic Schema（如 `app/schemas/user.py`）。
+   - 修改 SQLAlchemy 模型（如 `app/models/user.py`）以及对应路由（如 `app/api/v1/users.py`）。
+   - 确保本地测试通过。
+2. **导出最新 OpenAPI**
+   - 运行：`pnpm --filter api openapi:export`
+   - 生成/更新 `apps/api/openapi/openapi.json`。
+3. **生成前端 API Client 与类型**
+   - 运行：`pnpm --filter web api:generate`
+   - orval 使用 `orval.config.ts` 配置，从 `openapi.json` 生成：
+     - `src/api/client.ts`
+     - `src/api/endpoints/*`
+     - `src/api/models/*`
+4. **前端使用生成的 Client**
+   - 页面或 hooks 中应优先调用 `src/api/endpoints/*` 提供的函数，而不是手写 `fetch`。
+
+### Cursor 在前端调用接口时的约束
+
+- 优先使用 orval 生成的 client：
+  - 例如用户接口：从 `src/api/endpoints/users/users.ts` 中导入调用函数。
+  - 类型从 `src/api/models/*` 或 `src/types` 中导入，而不是重新定义重复类型。
+- 除非明确说明是特殊场景（如非 API 代理的第三方服务），否则不新建裸 `fetch("/api/...")` 调用。
+

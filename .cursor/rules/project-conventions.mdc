@@ -1,0 +1,62 @@
+---
+description: 项目结构、代码风格、测试与协作的全局约定
+globs: "**/*"
+alwaysApply: true
+---
+
+## 项目约定与整体协作规则
+
+本文件总结 Nexus Console 项目的整体约定，帮助 Cursor 在后端、前端和脚本层面保持一致风格。
+
+- 适用范围：整个仓库（特别是 `apps/api`、`apps/web`、`docs`、`monitoring` 等）。
+- 详细背景可参考：`.kiro/steering/structure.md`、`.kiro/steering/tech.md`、项目下各类文档。
+
+### 目录结构角色
+
+- `apps/api`：Python/FastAPI 后端服务，负责业务 API 与数据库访问。
+- `apps/web`：React/TypeScript 前端应用，使用 TanStack Router/Query、Zustand、Tailwind。
+- `monitoring`：Prometheus/Grafana 相关配置与告警。
+- `docs`：架构、部署、性能等文档。
+
+### 通用代码风格
+
+- Python：
+  - 遵守 `ruff` 与 `mypy` 严格模式（见 `apps/api/pyproject.toml`）。
+  - 所有函数/方法必须有类型注解，禁止 `Any` 滥用。
+  - 优先使用 Python 3.13 新语法（`list[str]`、`str | None` 等）。
+- TypeScript：
+  - `strict: true`，避免 `any`，除非有明确理由并作注释说明。
+  - 与 ESLint 配合使用，避免未使用变量/参数等。
+
+### 测试与质量保证
+
+- 后端：
+  - 使用 `pytest` + `pytest-asyncio`，测试放在 `app/tests` 下，文件命名为 `test_*.py`。
+  - 覆盖率通过 `pytest-cov` 统计，生成 HTML 报告位于 `apps/api/htmlcov`。
+- 前端：
+  - 使用 `vitest` + `@testing-library/react` 进行单元测试。
+  - 覆盖率报告位于 `apps/web/coverage`。
+  - 端到端测试使用 Playwright，脚本在 `apps/web/e2e` 中。
+
+### 脚本与自动化
+
+- 根目录：
+  - `pnpm test` / `dev` / `build` / `lint` 通过 `turbo` 分发到各子项目。
+  - `pnpm types:sync` 用于后端/前端类型同步。
+  - `scripts/validate-env.sh` / `scripts/check-deps.sh` 用于环境与依赖检查。
+
+### 与 Cursor 交互时的建议
+
+- 当用户请求：
+  - **新增后端接口**：优先流程为：
+    1. 定义/修改 Pydantic Schema。
+    2. 更新 SQLAlchemy 模型（如需要）。
+    3. 在 `app/api/v1` 下增加路由。
+    4. 运行后端测试。
+    5. 触发类型同步（如该接口需被前端使用）。
+  - **新增前端页面或功能**：
+    1. 在 `src/routes` 下新增相应路由文件（遵守 TanStack Router 文件命名）。
+    2. 复用 `components/ui` 中基础组件。
+    3. 使用 `TanStack Query` + orval client 调用后端。
+    4. 如有全局 UI 状态需求，考虑使用 `Zustand` store。
+

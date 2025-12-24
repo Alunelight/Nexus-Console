@@ -1,0 +1,53 @@
+---
+description: 前端 React / TypeScript / TanStack Router 组件与路由规则
+globs: apps/web/src/**/*
+alwaysApply: false
+---
+
+## Frontend React / TypeScript / Router 规则
+
+本文件用于指导 Cursor 在 `apps/web` 中编写和修改前端 React 代码时遵循本项目约定与官方最佳实践。
+
+- 适用范围：`apps/web/src` 下的 `main.tsx`、`routes/*`、`components/*`、`hooks/*` 等。
+- 优先级：当与通用前端规则冲突时，以本文件为准。
+
+### 技术栈与总体约定
+
+- 使用 **React 19** 函数组件 + Hooks，禁止 class 组件。
+- 使用 **TypeScript 严格模式**，避免 `any`；配合 ESLint 规则。
+- 路由使用 **TanStack Router** 文件路由，禁止 `react-router`。
+- 样式使用 **Tailwind CSS** + `clsx` + `class-variance-authority`，避免 CSS-in-JS。
+
+### 应用入口与 Router
+
+- 入口文件 `main.tsx` 约定：
+  - 使用 `createRouter({ routeTree })` 创建 Router，`routeTree` 来自 `routeTree.gen.ts`。
+  - 使用 `RouterProvider` 包裹应用。
+- Root Route：
+  - 在 `routes/__root.tsx` 使用 `createRootRoute` 定义根布局（导航栏 + `Outlet`）。
+  - 如需调试，使用 `TanStackRouterDevtools`。
+
+### 文件路由约定（TanStack Router）
+
+- 所有页面组件应放在 `src/routes` 下，以文件名代表路由：
+  - `index.tsx` → `/`
+  - `about.tsx` → `/about`
+  - `users.tsx` → `/users`
+  - 动态参数如用户详情可使用 `$userId.tsx` 等形式。
+- 在每个路由文件中：
+  - 导出 `Route` 常量：
+    - `export const Route = createFileRoute("...")({ component: ... })`
+  - 路由内部组件只在该文件中定义或从 `components` 中复用。
+
+### 组件与 UI 约定
+
+- 优先复用 `src/components/ui/*` 中的基础组件（例如 `button`, `card`, `input`）。
+- 新组件：
+  - 放在 `components/` 下，按功能子目录划分（未来扩展时遵守此约定）。
+  - 使用 Tailwind 工具类，不单独引入 styled-components/emotion 等库。
+
+### Hooks 使用规范
+
+- 将通用逻辑抽离为自定义 Hooks 放在 `src/hooks` 下（例如 `useUsers`、`useCounter`）。
+- 副作用（数据获取、订阅、计时器等）放在 Hook 中，而不是直接写在组件渲染逻辑里。
+

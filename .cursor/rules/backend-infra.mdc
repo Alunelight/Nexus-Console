@@ -1,0 +1,61 @@
+---
+description: 后端基础设施与跨切关注点规则（lifespan/缓存/限流/日志/错误处理）
+globs: apps/api/app/**/*.py
+alwaysApply: false
+---
+
+## Backend 基础设施与跨切关注点规则
+
+本文件约束 `apps/api` 中与基础设施相关的代码：生命周期管理、缓存、限流、日志和错误处理等。
+
+- 适用范围：`app/main.py`、`app/core/*`、与 Redis/缓存/限流/日志相关的代码。
+- 优先级：当与通用后端规则冲突时，以本文件为准。
+
+### 应用生命周期（Lifespan）
+
+- 使用 FastAPI 官方推荐的 `lifespan` 上下文管理模式：
+  - 在 `main.py` 中通过 `@asynccontextmanager` 定义 lifespan。
+  - 在 lifespan startup 阶段：
+    - 初始化日志（`configure_logging()`）。
+    - 打印启动信息（版本号、调试模式等）。
+    - 初始化 Redis 缓存（`init_cache()`）。
+  - 在 lifespan shutdown 阶段：
+    - 关闭缓存连接（`close_cache()`）。
+    - 打印应用关闭日志。
+
+### 缓存（Redis + fastapi-cache2）
+
+- 初始化与关闭：
+  - 在 lifespan 中统一调用 `init_cache()` 和 `close_cache()`，禁止在具体路由里随意创建/关闭连接。
+- 使用方式：
+  - 在只读接口上使用装饰器 `@cache(expire=...)`。
+  - 缓存 key 要稳定，尽量与 URL / 查询参数一致（使用默认行为即可）。
+  - 写操作成功后，如果涉及缓存数据，建议在后续扩展中增加主动失效逻辑（目前项目主要依赖过期时间）。
+
+### 限流（slowapi）
+
+- 全局配置：
+  - 在 `main.py` 中创建全局 `Limiter` 实例，并挂到 `app.state.limiter`。
+  - 注册 `RateLimitExceeded` 的异常处理器 `_rate_limit_exceeded_handler`。
+- 使用规范：
+  - 对公开接口如 `/`、`/health`、`/api/v1/users/*` 按需添加 `@limiter.limit("N/minute")` 装饰器。
+  - 对内部管理接口可配置更宽松的限流或不配置。
+
+### 日志（structlog）
+
+- 初始化：
+  - 在 `app/core/logging.py` 中集中配置 structlog，`main.py` 只调用 `configure_logging()` 和 `get_logger(__name__)`。
+- 使用规范：
+  - 使用结构化日志字段，例如：`logger.info("application_startup", version=..., debug=...)`。
+  - 不直接使用 `print`，统一使用 logger。
+
+### 错误处理与异常映射
+
+- 全局异常处理：
+  - 在 `main.py` 中为以下异常注册处理器：
+    - `RequestValidationError` → 返回统一的 422 错误结构。
+    - `IntegrityError` → 返回 400/409 等业务友好错误，而不是原始数据库错误。
+    - `Exception` → 兜底，返回 500，并记录详细日志。
+- 本地异常处理：
+  - 在具体业务路由中使用 `HTTPException` 表达业务错误（如用户不存在、权限不足等）。
+

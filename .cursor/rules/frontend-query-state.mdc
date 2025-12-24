@@ -1,0 +1,60 @@
+---
+description: 前端数据获取 / TanStack Query / Zustand / 表单校验规则
+globs: apps/web/src/**/*
+alwaysApply: false
+---
+
+## Frontend 数据获取 / TanStack Query / Zustand 规则
+
+本文件约束 `apps/web` 中与服务端数据获取、缓存和全局状态管理相关的实现方式。
+
+- 适用范围：`src/api/*`、`src/hooks/*`、`src/stores/*`、页面中对数据的使用。
+- 优先级：当与其它前端规则冲突时，以本文件为准。
+
+### TanStack Query v5 约定
+
+- QueryClient：
+  - 在 `main.tsx` 中创建单例 `QueryClient`，配置合理的 `staleTime` 和 `refetchOnWindowFocus`。
+- 查询（useQuery）：
+  - 统一使用对象写法：
+    - `useQuery({ queryKey: [...], queryFn: ... })`
+  - `queryFn` 必须返回 `Promise<T>`，错误通过抛异常触发 `isError`。
+  - 列表/分页建议：
+    - `['users']` → 所有用户列表。
+    - `['users', { page, pageSize }]` → 分页列表。
+    - `['user', userId]` → 单个用户。
+- 变更（useMutation）：
+  - 使用 `useMutation({ mutationFn, onSuccess })`。
+  - 在 `onSuccess` 中使用 `queryClient.invalidateQueries` 失效相关列表：
+    - 例如创建/更新用户后 `invalidateQueries({ queryKey: ['users'] })`。
+
+### API Client 与类型
+
+- 所有 HTTP 调用优先使用 `src/api` 下由 **orval** 生成的 client 与模型类型：
+  - 不手写裸 `fetch('/api/...')` 调用，除非是特殊场景且在规则中注明。
+  - 端点文件在 `src/api/endpoints/*` 中，模型在 `src/api/models/*` 中。
+- 如需新增接口：
+  - 修改后端路由与 Pydantic Schema。
+  - 运行 `pnpm types:sync` 同步 OpenAPI → orval → 前端类型。
+  - 前端通过新的 client 方法访问。
+
+### Zustand 状态管理
+
+- 全局状态：
+  - 使用 `zustand` 创建小而专注的 store，例如 `authStore` 只关心用户登录状态。
+  - store 类型定义明确，避免 `any`。
+- 使用模式：
+  - 优先通过 TanStack Query 管理**服务器状态**（可从服务端同步的），通过 Zustand 管理**UI/会话状态**（如当前选中的 Tab、模态框开关等）。
+  - 复杂选择器使用 `useShallow` 以减少重渲染。
+
+### 表单与 Zod 集成
+
+- 表单：
+  - 使用 `react-hook-form` + `@hookform/resolvers/zod` + `zod` 定义 Schema。
+  - `z.infer<typeof schema>` 衍生表单类型，避免重复定义 TypeScript 接口。
+- 与 Query / Mutation 的配合：
+  - 表单提交时调用 mutation 的 `mutate`/`mutateAsync`。
+  - 成功后根据场景：
+    - 重定向/关闭弹窗。
+    - 失效相关 Query 以刷新数据。
+
