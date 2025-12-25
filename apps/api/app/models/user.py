@@ -1,11 +1,17 @@
 """User model."""
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.auth_identity import AuthIdentity
 
 
 class User(Base):
@@ -33,4 +39,9 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         index=True,  # 添加索引以支持按更新时间排序
+    )
+
+    # Relationships
+    auth_identities: Mapped[list[AuthIdentity]] = relationship(
+        "AuthIdentity", back_populates="user", cascade="all, delete-orphan"
     )

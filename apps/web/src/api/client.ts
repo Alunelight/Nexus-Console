@@ -11,9 +11,7 @@ interface CustomFetchConfig extends RequestInit {
   params?: Record<string, unknown>;
 }
 
-export const customFetch = async <T>(
-  config: CustomFetchConfig
-): Promise<T> => {
+export const customFetch = async <T>(config: CustomFetchConfig): Promise<T> => {
   const { url, data, params, ...rest } = config;
 
   // 构建 URL（处理查询参数）
@@ -34,8 +32,9 @@ export const customFetch = async <T>(
   const response = await fetch(finalUrl, {
     ...rest,
     body: data ? JSON.stringify(data) : rest.body,
+    credentials: "include", // 携带 cookie 以支持基于 cookie 的认证
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...rest.headers,
     },
   });

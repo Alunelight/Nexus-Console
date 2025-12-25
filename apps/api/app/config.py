@@ -1,5 +1,7 @@
 """Application configuration."""
 
+from typing import Literal
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -35,6 +37,13 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+
+    # Authentication
+    access_token_expires_minutes: int = 30  # 30 分钟
+    refresh_token_expires_days: int = 7  # 7 天
+    cookie_secure: bool = False  # 生产环境应设为 True（需要 HTTPS）
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"  # lax | strict | none
+    cookie_domain: str | None = None  # 生产环境可指定域名
 
     @field_validator("secret_key")
     @classmethod

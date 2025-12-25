@@ -1,14 +1,42 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useListUsersApiV1UsersGet } from '@/api/endpoints/users/users';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { customFetch } from "@/api/client";
+import { useListUsersApiV1UsersGet } from "@/api/endpoints/users/users";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/users')({
+export const Route = createFileRoute("/users")({
+  beforeLoad: async ({ location }) => {
+    try {
+      // 尝试获取当前用户（验证认证状态）
+      await customFetch({
+        url: "http://localhost:8000/api/v1/auth/me",
+        method: "GET",
+      });
+    } catch {
+      // 认证失败，重定向到登录页
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
   component: Users,
 });
 
 function Users() {
-  const { data: users, isPending, isError } = useListUsersApiV1UsersGet({
+  const {
+    data: users,
+    isPending,
+    isError,
+  } = useListUsersApiV1UsersGet({
     skip: 0,
     limit: 10,
   });
@@ -18,9 +46,7 @@ function Users() {
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle>用户列表</CardTitle>
-          <CardDescription>
-            使用 Orval 生成的类型安全 API Hooks
-          </CardDescription>
+          <CardDescription>使用 Orval 生成的类型安全 API Hooks</CardDescription>
         </CardHeader>
         <CardContent>
           {isPending && <p className="text-muted-foreground">加载中...</p>}
@@ -36,8 +62,10 @@ function Users() {
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div>
-                    <p className="font-medium">{user.name || '未命名'}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="font-medium">{user.name || "未命名"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
                   <Button variant="outline" size="sm">
                     查看详情
