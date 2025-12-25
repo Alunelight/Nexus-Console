@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 async def init_cache() -> None:
     """Initialize Redis cache."""
     try:
-        redis = aioredis.from_url(
+        redis = aioredis.from_url(  # type: ignore[no-untyped-call]
             settings.redis_url,
             encoding="utf-8",
             decode_responses=True,

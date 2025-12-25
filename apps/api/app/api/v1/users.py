@@ -33,7 +33,7 @@ async def create_user(
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
-    return db_user
+    return UserResponse.model_validate(db_user)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -46,7 +46,7 @@ async def get_user(
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+    return UserResponse.model_validate(user)
 
 
 @router.get("/", response_model=list[UserResponse])
@@ -58,7 +58,8 @@ async def list_users(
 ) -> list[UserResponse]:
     """List all users."""
     result = await db.execute(select(User).offset(skip).limit(limit))
-    return list(result.scalars().all())
+    users = result.scalars().all()
+    return [UserResponse.model_validate(user) for user in users]
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -79,7 +80,7 @@ async def update_user(
 
     await db.commit()
     await db.refresh(user)
-    return user
+    return UserResponse.model_validate(user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

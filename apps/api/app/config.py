@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     @field_validator("secret_key")
     @classmethod
-    def validate_secret_key(cls, v: str, info) -> str:
+    def validate_secret_key(cls, v: str, info: object) -> str:
         """验证 SECRET_KEY 不能在生产环境使用默认值."""
         # 获取 debug 值，如果是生产环境（debug=False）则严格验证
         if v.startswith("dev-secret-key-change-in-production"):
