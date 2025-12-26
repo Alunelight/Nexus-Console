@@ -2,12 +2,13 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import require_permissions
+from app.core.audit import audit_event
 from app.core.exceptions import (
     PermissionNotFoundError,
     RoleAlreadyExistsError,
@@ -49,7 +50,8 @@ async def list_roles(
 async def create_role(
     payload: RoleCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("rbac:write"))],
+    actor: Annotated[User, Depends(require_permissions("rbac:write"))],
+    request: Request,
 ) -> RoleResponse:
     existing = (
         await db.execute(select(Role).where(Role.name == payload.name))
@@ -65,6 +67,23 @@ async def create_role(
         is_system=False,
     )
     db.add(role)
+    await db.flush()
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="rbac.role.create",
+        target_type="role",
+        target_id=role.id,
+        payload={
+            "name": role.name,
+            "description": role.description,
+            "exclusive_group": role.exclusive_group,
+            "priority": role.priority,
+        },
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     await db.refresh(role)
     return RoleResponse.model_validate(role)
@@ -75,7 +94,8 @@ async def update_role(
     role_id: int,
     payload: RoleUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("rbac:write"))],
+    actor: Annotated[User, Depends(require_permissions("rbac:write"))],
+    request: Request,
 ) -> RoleResponse:
     role = await db.get(Role, role_id)
     if not role:
@@ -101,6 +121,22 @@ async def update_role(
     if payload.priority is not None and not role.is_system:
         role.priority = payload.priority
 
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="rbac.role.update",
+        target_type="role",
+        target_id=role.id,
+        payload={
+            "name": role.name,
+            "description": role.description,
+            "exclusive_group": role.exclusive_group,
+            "priority": role.priority,
+        },
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     await db.refresh(role)
     return RoleResponse.model_validate(role)
@@ -110,7 +146,8 @@ async def update_role(
 async def delete_role(
     role_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("rbac:write"))],
+    actor: Annotated[User, Depends(require_permissions("rbac:write"))],
+    request: Request,
 ) -> None:
     role = await db.get(Role, role_id)
     if not role:
@@ -125,6 +162,17 @@ async def delete_role(
     ).scalar_one_or_none()
     if in_use is not None:
         raise RoleInUseError(role_id)
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="rbac.role.delete",
+        target_type="role",
+        target_id=role_id,
+        payload={"name": role.name},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.delete(role)
     await db.commit()
 
@@ -144,7 +192,8 @@ async def set_role_permissions(
     role_id: int,
     payload: RolePermissionsUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("rbac:write"))],
+    actor: Annotated[User, Depends(require_permissions("rbac:write"))],
+    request: Request,
 ) -> RoleResponse:
     role = (
         await db.execute(
@@ -154,9 +203,21 @@ async def set_role_permissions(
     if not role:
         raise RoleNotFoundError(role_id)
 
+    before_codes = sorted({p.code for p in role.permissions})
     codes = [c.strip() for c in payload.permission_codes if c.strip()]
     if not codes:
         role.permissions = []
+        audit_event(
+            db,
+            actor_user_id=actor.id,
+            action="rbac.role.permissions.set",
+            target_type="role",
+            target_id=role.id,
+            payload={"before": before_codes, "after": []},
+            request_id=request.headers.get("x-request-id"),
+            ip=(request.client.host if request.client else None),
+            user_agent=request.headers.get("user-agent"),
+        )
         await db.commit()
         await db.refresh(role)
         return RoleResponse.model_validate(role)
@@ -169,6 +230,17 @@ async def set_role_permissions(
         raise PermissionNotFoundError(missing)
 
     role.permissions = list(permissions)
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="rbac.role.permissions.set",
+        target_type="role",
+        target_id=role.id,
+        payload={"before": before_codes, "after": sorted(codes)},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     await db.refresh(role)
     return RoleResponse.model_validate(role)
@@ -179,7 +251,8 @@ async def set_user_roles(
     user_id: int,
     payload: UserRolesUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("rbac:write"))],
+    actor: Annotated[User, Depends(require_permissions("rbac:write"))],
+    request: Request,
 ) -> UserResponse:
     user = (
         await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
@@ -187,9 +260,21 @@ async def set_user_roles(
     if not user:
         raise UserNotFoundError(user_id)
 
+    before_names = sorted({r.name for r in user.roles})
     names = [n.strip() for n in payload.role_names if n.strip()]
     if not names:
         user.roles = []
+        audit_event(
+            db,
+            actor_user_id=actor.id,
+            action="rbac.user.roles.set",
+            target_type="user",
+            target_id=user.id,
+            payload={"before": before_names, "requested": [], "after": []},
+            request_id=request.headers.get("x-request-id"),
+            ip=(request.client.host if request.client else None),
+            user_agent=request.headers.get("user-agent"),
+        )
         await db.commit()
         await db.refresh(user)
         return UserResponse.model_validate(user)
@@ -215,6 +300,18 @@ async def set_user_roles(
             normalized[group] = role
 
     user.roles = list(normalized.values())
+    after_names = sorted({r.name for r in user.roles})
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="rbac.user.roles.set",
+        target_type="user",
+        target_id=user.id,
+        payload={"before": before_names, "requested": names, "after": after_names},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)

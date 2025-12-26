@@ -2,15 +2,17 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Request, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, require_permissions
+from app.core.audit import audit_event
 from app.core.exceptions import EmailAlreadyExistsError, UserNotFoundError
 from app.database import get_db
 from app.models.user import User
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -56,7 +58,8 @@ async def update_current_user_profile(
 async def create_user(
     user: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("users:write"))],
+    actor: Annotated[User, Depends(require_permissions("users:write"))],
+    request: Request,
 ) -> UserResponse:
     """Create a new user."""
     # Check if user already exists
@@ -67,24 +70,58 @@ async def create_user(
     # Create new user
     db_user = User(**user.model_dump())
     db.add(db_user)
+    await db.flush()
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="users.create",
+        target_type="user",
+        target_id=db_user.id,
+        payload={"email": db_user.email, "name": db_user.name, "is_active": db_user.is_active},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     await db.refresh(db_user)
     return UserResponse.model_validate(db_user)
 
 
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: int,
+@router.get("/page", response_model=PaginatedResponse[UserResponse])
+async def list_users_page(
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(require_permissions("users:read"))],
-) -> UserResponse:
-    """Get a user by ID."""
-    user = (
-        await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
-    ).scalar_one_or_none()
-    if user is None:
-        raise UserNotFoundError(user_id)
-    return UserResponse.model_validate(user)
+    skip: int = 0,
+    limit: int = 20,
+    q: str | None = None,
+    is_active: bool | None = None,
+) -> PaginatedResponse[UserResponse]:
+    """List users with server-side pagination, optional search, and status filter."""
+    filters = []
+
+    if is_active is not None:
+        filters.append(User.is_active.is_(is_active))
+
+    query = (q or "").strip()
+    if query:
+        like = f"%{query}%"
+        filters.append(or_(User.email.ilike(like), User.name.ilike(like)))
+
+    total_stmt = select(func.count()).select_from(User)
+    if filters:
+        total_stmt = total_stmt.where(*filters)
+    total = (await db.execute(total_stmt)).scalar_one()
+
+    items_stmt = (
+        select(User).options(selectinload(User.roles)).order_by(User.id).offset(skip).limit(limit)
+    )
+    if filters:
+        items_stmt = items_stmt.where(*filters)
+
+    result = await db.execute(items_stmt)
+    users = result.scalars().all()
+    items = [UserResponse.model_validate(u) for u in users]
+    return PaginatedResponse[UserResponse].create(items=items, total=total, skip=skip, limit=limit)
 
 
 @router.get("/", response_model=list[UserResponse])
@@ -102,12 +139,29 @@ async def list_users(
     return [UserResponse.model_validate(user) for user in users]
 
 
+# 注意：/{user_id} 路由必须在 /page 和 / 之后定义，否则 FastAPI 会将 "page" 或空字符串匹配为 user_id
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user(
+    user_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("users:read"))],
+) -> UserResponse:
+    """Get a user by ID."""
+    user = (
+        await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise UserNotFoundError(user_id)
+    return UserResponse.model_validate(user)
+
+
 @router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("users:write"))],
+    actor: Annotated[User, Depends(require_permissions("users:write"))],
+    request: Request,
 ) -> UserResponse:
     """Update a user."""
     user = (
@@ -116,11 +170,25 @@ async def update_user(
     if user is None:
         raise UserNotFoundError(user_id)
 
+    before = {"email": user.email, "name": user.name, "is_active": user.is_active}
+
     # Update only provided fields
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(user, field, value)
 
+    after = {"email": user.email, "name": user.name, "is_active": user.is_active}
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="users.update",
+        target_type="user",
+        target_id=user.id,
+        payload={"before": before, "after": after},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.commit()
     refreshed = (
         await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
@@ -132,12 +200,24 @@ async def update_user(
 async def delete_user(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[User, Depends(require_permissions("users:write"))],
+    actor: Annotated[User, Depends(require_permissions("users:write"))],
+    request: Request,
 ) -> None:
     """Delete a user."""
     user = await db.get(User, user_id)
     if not user:
         raise UserNotFoundError(user_id)
 
+    audit_event(
+        db,
+        actor_user_id=actor.id,
+        action="users.delete",
+        target_type="user",
+        target_id=user.id,
+        payload={"email": user.email, "name": user.name, "is_active": user.is_active},
+        request_id=request.headers.get("x-request-id"),
+        ip=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
     await db.delete(user)
     await db.commit()

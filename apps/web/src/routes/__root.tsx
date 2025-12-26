@@ -53,9 +53,14 @@ function RootComponent() {
           关于
         </Link>
         {isAuthenticated && user?.permissions?.includes("rbac:read") ? (
-          <Link to="/admin/rbac" className="[&.active]:font-bold">
-            权限
-          </Link>
+          <>
+            <Link to="/admin/rbac" className="[&.active]:font-bold">
+              权限
+            </Link>
+            <Link to="/admin/audit" className="[&.active]:font-bold">
+              审计
+            </Link>
+          </>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
           {isAuthenticated && user ? (

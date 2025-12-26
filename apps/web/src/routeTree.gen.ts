@@ -17,7 +17,9 @@ import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as ExamplesRouteImport } from './routes/examples'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as AdminRbacRouteImport } from './routes/admin/rbac'
+import { Route as AdminAuditRouteImport } from './routes/admin/audit'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -59,9 +61,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersUserIdRoute = UsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => UsersRoute,
+} as any)
 const AdminRbacRoute = AdminRbacRouteImport.update({
   id: '/admin/rbac',
   path: '/admin/rbac',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/admin/audit',
+  path: '/admin/audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -73,8 +85,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/users': typeof UsersRoute
+  '/users': typeof UsersRouteWithChildren
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/rbac': typeof AdminRbacRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,8 +98,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/users': typeof UsersRoute
+  '/users': typeof UsersRouteWithChildren
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/rbac': typeof AdminRbacRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,8 +112,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
-  '/users': typeof UsersRoute
+  '/users': typeof UsersRouteWithChildren
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/rbac': typeof AdminRbacRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,7 +128,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/users'
+    | '/admin/audit'
     | '/admin/rbac'
+    | '/users/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -121,7 +141,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/users'
+    | '/admin/audit'
     | '/admin/rbac'
+    | '/users/$userId'
   id:
     | '__root__'
     | '/'
@@ -132,7 +154,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/users'
+    | '/admin/audit'
     | '/admin/rbac'
+    | '/users/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,7 +167,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
-  UsersRoute: typeof UsersRoute
+  UsersRoute: typeof UsersRouteWithChildren
+  AdminAuditRoute: typeof AdminAuditRoute
   AdminRbacRoute: typeof AdminRbacRoute
 }
 
@@ -205,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/$userId': {
+      id: '/users/$userId'
+      path: '/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof UsersUserIdRouteImport
+      parentRoute: typeof UsersRoute
+    }
     '/admin/rbac': {
       id: '/admin/rbac'
       path: '/admin/rbac'
@@ -212,8 +244,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRbacRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/admin/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface UsersRouteChildren {
+  UsersUserIdRoute: typeof UsersUserIdRoute
+}
+
+const UsersRouteChildren: UsersRouteChildren = {
+  UsersUserIdRoute: UsersUserIdRoute,
+}
+
+const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -223,7 +272,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
-  UsersRoute: UsersRoute,
+  UsersRoute: UsersRouteWithChildren,
+  AdminAuditRoute: AdminAuditRoute,
   AdminRbacRoute: AdminRbacRoute,
 }
 export const routeTree = rootRouteImport
