@@ -5,7 +5,9 @@ import {
   useListPermissionsApiV1PermissionsGet,
   useListRolesApiV1RolesGet,
   useSetRolePermissionsApiV1RolesRoleIdPermissionsPut,
+  useSetUserRolesApiV1UsersUserIdRolesPut,
 } from "@/api/endpoints/rbac/rbac";
+import { useListUsersApiV1UsersGet } from "@/api/endpoints/users/users";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,19 +32,30 @@ export const Route = createFileRoute("/admin/rbac")({
 function AdminRbacPage() {
   const { hasPermission } = usePermission();
   const canWrite = hasPermission("rbac:write");
+  const canReadUsers = hasPermission("users:read");
   const { handleError } = useErrorHandler();
 
   const rolesQuery = useListRolesApiV1RolesGet();
   const permissionsQuery = useListPermissionsApiV1PermissionsGet();
+  const usersQuery = useListUsersApiV1UsersGet(
+    { skip: 0, limit: 100 },
+    { query: { enabled: canReadUsers } }
+  );
 
   const createRole = useCreateRoleApiV1RolesPost();
   const setRolePermissions =
     useSetRolePermissionsApiV1RolesRoleIdPermissionsPut();
+  const setUserRoles = useSetUserRolesApiV1UsersUserIdRolesPut();
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const selectedRole = useMemo(() => {
     return (rolesQuery.data ?? []).find((r) => r.id === selectedRoleId) ?? null;
   }, [rolesQuery.data, selectedRoleId]);
+
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const selectedUser = useMemo(() => {
+    return (usersQuery.data ?? []).find((u) => u.id === selectedUserId) ?? null;
+  }, [usersQuery.data, selectedUserId]);
 
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDesc, setNewRoleDesc] = useState("");
@@ -52,15 +65,30 @@ function AdminRbacPage() {
   const allPermissions = permissionsQuery.data ?? [];
 
   const [permissionCodes, setPermissionCodes] = useState<string[]>([]);
+  const [userRoleNames, setUserRoleNames] = useState<string[]>([]);
+  const [userSearch, setUserSearch] = useState("");
 
   const onSelectRole = (roleId: number, codes: string[]) => {
     setSelectedRoleId(roleId);
     setPermissionCodes(codes);
   };
 
+  const onSelectUser = (userId: number, roleNames: string[]) => {
+    setSelectedUserId(userId);
+    setUserRoleNames(roleNames);
+  };
+
   const togglePermission = (code: string) => {
     setPermissionCodes((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+  };
+
+  const toggleUserRole = (roleName: string) => {
+    setUserRoleNames((prev) =>
+      prev.includes(roleName)
+        ? prev.filter((n) => n !== roleName)
+        : [...prev, roleName]
     );
   };
 
@@ -108,6 +136,26 @@ function AdminRbacPage() {
       const info = handleError(err, {
         showToast: false,
         defaultMessage: "更新权限失败",
+      });
+      setError(info.message);
+    }
+  };
+
+  const onSaveUserRoles = async () => {
+    if (!selectedUser) return;
+    try {
+      setError("");
+      setSuccess("");
+      await setUserRoles.mutateAsync({
+        userId: selectedUser.id,
+        data: { role_names: userRoleNames },
+      });
+      await usersQuery.refetch();
+      setSuccess("用户角色已更新");
+    } catch (err: unknown) {
+      const info = handleError(err, {
+        showToast: false,
+        defaultMessage: "更新用户角色失败",
       });
       setError(info.message);
     }
@@ -262,6 +310,156 @@ function AdminRbacPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-8">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">用户角色分配</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            选择用户并为其勾选角色（保存需要 rbac:write；加载用户列表需要
+            users:read）
+          </p>
+        </div>
+
+        {!canReadUsers ? (
+          <div className="rounded-md border p-4 text-sm text-muted-foreground">
+            你没有 users:read 权限，无法在此页面加载用户列表。
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>用户列表</CardTitle>
+                <CardDescription>选择一个用户进行角色分配</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  placeholder="按邮箱/名称搜索"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  disabled={usersQuery.isPending}
+                />
+
+                <div className="space-y-2">
+                  {(usersQuery.data ?? [])
+                    .filter((u) => {
+                      const q = userSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      const email = u.email.toLowerCase();
+                      const name = (u.name ?? "").toLowerCase();
+                      return email.includes(q) || name.includes(q);
+                    })
+                    .map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className={`w-full text-left rounded-md border p-3 hover:bg-muted ${
+                          selectedUserId === u.id ? "bg-muted" : ""
+                        }`}
+                        onClick={() =>
+                          onSelectUser(
+                            u.id,
+                            (u.roles ?? []).map((r) => r.name)
+                          )
+                        }
+                      >
+                        <div className="font-medium">{u.name || "未命名"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {u.email}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          角色：
+                          {(u.roles ?? []).length > 0
+                            ? (u.roles ?? []).map((r) => r.name).join(", ")
+                            : "（无）"}
+                        </div>
+                      </button>
+                    ))}
+                  {usersQuery.isPending ? (
+                    <p className="text-sm text-muted-foreground">
+                      加载用户中...
+                    </p>
+                  ) : null}
+                  {usersQuery.isError ? (
+                    <p className="text-sm text-destructive">加载用户失败</p>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>角色分配</CardTitle>
+                <CardDescription>为选中用户勾选角色</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!selectedUser ? (
+                  <p className="text-sm text-muted-foreground">
+                    请先在左侧选择一个用户
+                  </p>
+                ) : (
+                  <>
+                    <div className="rounded-md border p-3">
+                      <div className="font-medium">
+                        {selectedUser.name || "未命名"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {selectedUser.email}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(rolesQuery.data ?? []).map((r) => {
+                        const checked = userRoleNames.includes(r.name);
+                        return (
+                          <label
+                            key={r.id}
+                            className="flex items-start gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleUserRole(r.name)}
+                              disabled={!canWrite || setUserRoles.isPending}
+                            />
+                            <span>
+                              <span className="font-mono">{r.name}</span>
+                              {r.description ? (
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  — {r.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        );
+                      })}
+                      {rolesQuery.isLoading ? (
+                        <p className="text-sm text-muted-foreground">
+                          加载角色中...
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {!canWrite ? (
+                      <p className="text-xs text-muted-foreground">
+                        你只有只读权限（rbac:read），无法修改用户角色
+                      </p>
+                    ) : null}
+
+                    <Button
+                      className="w-full"
+                      onClick={onSaveUserRoles}
+                      disabled={!canWrite || setUserRoles.isPending}
+                    >
+                      {setUserRoles.isPending ? "保存中..." : "保存用户角色"}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

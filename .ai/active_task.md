@@ -1,14 +1,13 @@
-# 当前任务：修复本地 dev 注册失败（RBAC 表未迁移）
+# 当前任务：在“权限页”支持给用户分配角色
 
 ## 当前目标
-修复 `POST /api/v1/auth/register` 500：确保本地开发数据库已应用 RBAC 相关 Alembic 迁移（创建 `roles/permissions/*_roles/*_permissions` 表），并消除前端 dev 的路由扫描警告。
+在 `/admin/rbac` 页面中增加“用户角色分配”能力：可查看用户列表、选中用户并为其勾选角色并保存（调用现有 RBAC API `PUT /api/v1/users/{user_id}/roles`）。
 
 ## 实施进度
-- ✅ 已修复 `ADMIN_EMAILS` 空值导致的 Settings 解析崩溃（后端可正常启动）
-- ✅ 已处理：运行迁移后本地数据库已包含 RBAC 表（注册接口已验证不再 500）
-- ✅ 已处理：将 `apps/web/src/routes/*.test.tsx` 移出路由目录，消除 dev 扫描警告（单测已验证通过）
+- ✅ 已完成：后端 `UserResponse` 增加轻量 `roles` 字段，并在 users 相关接口预加载 roles
+- ✅ 已完成：运行 `pnpm types:sync` 同步 OpenAPI → orval（前端类型已更新）
+- ✅ 已完成：前端 `/admin/rbac` 新增“用户角色分配”区域（用户列表/搜索、角色勾选、保存），并按权限点（`users:read`/`rbac:write`）进行禁用/隐藏
 
 ## 下一步（短期）
-1. 运行 `pnpm --filter api migration:upgrade` 将数据库升级到最新迁移（包含 RBAC 表）。
-2. 验证注册接口不再报 `roles` 表不存在（最小化请求验证即可）。
-3. 将 `apps/web/src/routes/login.test.tsx`、`register.test.tsx` 移到非路由目录（例如 `apps/web/src/test/routes/`），消除 dev 警告并保证单测继续通过。
+1. 手动验证：用管理员账号登录后进入 `/admin/rbac`，在“用户角色分配”里给某个用户勾选角色并保存。
+2. 如需“给用户分配角色”的更好体验：增加分页、按角色过滤、批量操作与变更确认弹窗。

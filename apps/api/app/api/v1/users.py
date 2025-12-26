@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, require_permissions
 from app.core.exceptions import EmailAlreadyExistsError, UserNotFoundError
@@ -43,8 +44,12 @@ async def update_current_user_profile(
         setattr(current_user, field, value)
 
     await db.commit()
-    await db.refresh(current_user)
-    return UserResponse.model_validate(current_user)
+    refreshed = (
+        await db.execute(
+            select(User).options(selectinload(User.roles)).where(User.id == current_user.id)
+        )
+    ).scalar_one()
+    return UserResponse.model_validate(refreshed)
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -74,8 +79,10 @@ async def get_user(
     _: Annotated[User, Depends(require_permissions("users:read"))],
 ) -> UserResponse:
     """Get a user by ID."""
-    user = await db.get(User, user_id)
-    if not user:
+    user = (
+        await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
         raise UserNotFoundError(user_id)
     return UserResponse.model_validate(user)
 
@@ -88,7 +95,9 @@ async def list_users(
     limit: int = 100,
 ) -> list[UserResponse]:
     """List all users."""
-    result = await db.execute(select(User).offset(skip).limit(limit))
+    result = await db.execute(
+        select(User).options(selectinload(User.roles)).offset(skip).limit(limit)
+    )
     users = result.scalars().all()
     return [UserResponse.model_validate(user) for user in users]
 
@@ -101,8 +110,10 @@ async def update_user(
     _: Annotated[User, Depends(require_permissions("users:write"))],
 ) -> UserResponse:
     """Update a user."""
-    user = await db.get(User, user_id)
-    if not user:
+    user = (
+        await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
         raise UserNotFoundError(user_id)
 
     # Update only provided fields
@@ -111,8 +122,10 @@ async def update_user(
         setattr(user, field, value)
 
     await db.commit()
-    await db.refresh(user)
-    return UserResponse.model_validate(user)
+    refreshed = (
+        await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
+    ).scalar_one()
+    return UserResponse.model_validate(refreshed)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

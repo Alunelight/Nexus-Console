@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from app.schemas.rbac import RoleResponse
+from app.schemas.rbac import RoleRefResponse, RoleResponse
 
 
 class UserBase(BaseModel):
@@ -37,6 +37,7 @@ class UserResponse(UserBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    roles: list[RoleRefResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
