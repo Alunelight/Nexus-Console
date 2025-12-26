@@ -3,6 +3,8 @@
  * 用于 Orval 生成的 API 调用
  */
 
+import type { ApiError } from "@/types/errors";
+
 export type ErrorType<Error> = Error;
 
 interface CustomFetchConfig extends RequestInit {
@@ -40,9 +42,25 @@ export const customFetch = async <T>(config: CustomFetchConfig): Promise<T> => {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      detail: response.statusText,
-    }));
+    // 尝试解析错误响应
+    let error: ApiError;
+    try {
+      const errorData = await response.json();
+      // 确保错误格式统一
+      error = {
+        error: errorData.error || "Error",
+        detail: errorData.detail || response.statusText,
+        status_code: errorData.status_code || response.status,
+        code: errorData.code,
+      };
+    } catch {
+      // 如果无法解析 JSON，创建默认错误
+      error = {
+        error: "Request Failed",
+        detail: response.statusText || "An error occurred",
+        status_code: response.status,
+      };
+    }
     throw error;
   }
 

@@ -8,10 +8,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useAuthStore } from "@/stores/authStore";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createFileRoute,
+  Link,
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
@@ -26,15 +28,12 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export const Route = createFileRoute("/login")({
-  component: LoginPage,
-});
-
 function LoginPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/login" });
   const redirect = (search as { redirect?: string }).redirect || "/";
   const login = useAuthStore((state) => state.login);
+  const { handleError } = useErrorHandler();
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -80,12 +79,11 @@ function LoginPage() {
       // 导航到目标页面
       navigate({ to: redirect });
     } catch (err: unknown) {
-      console.error("Login error:", err);
-      if (err && typeof err === "object" && "detail" in err) {
-        setError((err as { detail: string }).detail);
-      } else {
-        setError("登录失败，请检查您的邮箱和密码");
-      }
+      const errorInfo = handleError(err, {
+        showToast: false, // 在表单中显示错误，不使用 Toast
+        defaultMessage: "登录失败，请检查您的邮箱和密码",
+      });
+      setError(errorInfo.message);
     } finally {
       setIsLoading(false);
     }
@@ -145,9 +143,23 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "登录中..." : "登录"}
             </Button>
+
+            <div className="text-center text-sm text-muted-foreground">
+              还没有账户？{" "}
+              <Link
+                to="/register"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                立即注册
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+export const Route = createFileRoute("/login")({
+  component: LoginPage,
+});

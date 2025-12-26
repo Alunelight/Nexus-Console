@@ -3,12 +3,19 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, Response, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.exceptions import (
+    EmailAlreadyExistsError,
+    InactiveUserError,
+    InvalidCredentialsError,
+    InvalidPasswordError,
+    TokenError,
+)
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -19,7 +26,7 @@ from app.core.security import (
 from app.database import get_db
 from app.models.auth_identity import AuthIdentity
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, RegisterRequest
 from app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -72,13 +79,9 @@ async def get_current_user(
         Current authenticated user
 
     Raises:
-        HTTPException: If authentication fails
+        TokenError: If authentication fails
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    credentials_exception = TokenError("Could not validate credentials")
 
     if not access_token:
         raise credentials_exception
@@ -115,7 +118,7 @@ async def get_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise InactiveUserError()
 
     return user
 
@@ -137,10 +140,7 @@ async def register(
         )
     )
     if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
+        raise EmailAlreadyExistsError(request.email)
 
     # 创建用户
     user = User(email=request.email, name=request.name, is_active=True)
@@ -183,25 +183,19 @@ async def login(
     auth_identity = result.scalar_one_or_none()
 
     if not auth_identity or not auth_identity.hashed_password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
+        raise InvalidCredentialsError()
 
     # 验证密码
     if not verify_password(request.password, auth_identity.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
+        raise InvalidCredentialsError()
 
     # 查询用户
     user = await db.get(User, auth_identity.user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise InvalidCredentialsError()
 
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise InactiveUserError()
 
     # 更新最后登录时间
     auth_identity.last_login_at = datetime.now(UTC)
@@ -237,11 +231,7 @@ async def refresh_token(
 
     Issues a new access token (and optionally a new refresh token).
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    credentials_exception = TokenError("Could not validate refresh token")
 
     if not refresh_token:
         raise credentials_exception
@@ -278,7 +268,7 @@ async def refresh_token(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise InactiveUserError()
 
     # 生成新 token
     new_access_token = create_access_token(user.id, auth_identity.token_version)
@@ -316,3 +306,37 @@ async def logout(
 
     # 清除 cookie
     clear_auth_cookies(response)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    """
+    Change current user's password.
+
+    Requires current password verification.
+    """
+    # 查询用户的认证身份
+    result = await db.execute(
+        select(AuthIdentity)
+        .where(AuthIdentity.user_id == current_user.id)
+        .where(AuthIdentity.provider == "password")
+    )
+    auth_identity = result.scalar_one_or_none()
+
+    if not auth_identity or not auth_identity.hashed_password:
+        raise InvalidCredentialsError()
+
+    # 验证当前密码
+    if not verify_password(request.current_password, auth_identity.hashed_password):
+        raise InvalidPasswordError("Current password is incorrect")
+
+    # 更新密码
+    auth_identity.hashed_password = hash_password(request.new_password)
+    # 递增 token_version，使所有现有 token 失效（安全措施）
+    auth_identity.token_version += 1
+
+    await db.commit()

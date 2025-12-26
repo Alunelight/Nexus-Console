@@ -337,3 +337,343 @@ async def test_inactive_user_cannot_login(client: AsyncClient, setup_database: N
     )
     assert response.status_code == 400
     assert "inactive" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_change_password_success(client: AsyncClient) -> None:
+    """Test successful password change."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "changepass@example.com",
+            "password": "oldpassword123",
+            "name": "Change Pass User",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "changepass@example.com",
+            "password": "oldpassword123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Change password
+    response = await client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "oldpassword123",
+            "new_password": "newpassword123",
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 204
+
+    # Old password should no longer work
+    old_login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "changepass@example.com",
+            "password": "oldpassword123",
+        },
+    )
+    assert old_login_response.status_code == 401
+
+    # New password should work
+    new_login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "changepass@example.com",
+            "password": "newpassword123",
+        },
+    )
+    assert new_login_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_current(client: AsyncClient) -> None:
+    """Test password change with wrong current password."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "wrongcurrent@example.com",
+            "password": "correctpassword",
+            "name": "Test User",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "wrongcurrent@example.com",
+            "password": "correctpassword",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Try to change password with wrong current password
+    response = await client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "wrongpassword",
+            "new_password": "newpassword123",
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 400
+    assert "incorrect" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_change_password_unauthenticated(client: AsyncClient) -> None:
+    """Test password change without authentication."""
+    response = await client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "oldpassword",
+            "new_password": "newpassword123",
+        },
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_change_password_invalid_new_password(client: AsyncClient) -> None:
+    """Test password change with invalid new password (too short)."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "invalidnew@example.com",
+            "password": "oldpassword123",
+            "name": "Test User",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "invalidnew@example.com",
+            "password": "oldpassword123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Try to change password with too short new password
+    response = await client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "oldpassword123",
+            "new_password": "short",  # Less than 8 characters
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 422  # Validation error
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_profile(client: AsyncClient) -> None:
+    """Test getting current user profile via /users/me."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "profile@example.com",
+            "password": "password123",
+            "name": "Profile User",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "profile@example.com",
+            "password": "password123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Get profile
+    response = await client.get("/api/v1/users/me", cookies=cookies)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "profile@example.com"
+    assert data["name"] == "Profile User"
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_profile_unauthenticated(client: AsyncClient) -> None:
+    """Test getting current user profile without authentication."""
+    response = await client.get("/api/v1/users/me")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_current_user_profile(client: AsyncClient) -> None:
+    """Test updating current user profile."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "updateprofile@example.com",
+            "password": "password123",
+            "name": "Original Name",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "updateprofile@example.com",
+            "password": "password123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Update profile
+    response = await client.patch(
+        "/api/v1/users/me",
+        json={
+            "name": "Updated Name",
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Updated Name"
+    assert data["email"] == "updateprofile@example.com"
+
+
+@pytest.mark.asyncio
+async def test_update_current_user_profile_email(client: AsyncClient) -> None:
+    """Test updating current user profile email."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "updateemail1@example.com",
+            "password": "password123",
+            "name": "User 1",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "updateemail1@example.com",
+            "password": "password123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Update email
+    response = await client.patch(
+        "/api/v1/users/me",
+        json={
+            "email": "newemail@example.com",
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "newemail@example.com"
+
+
+@pytest.mark.asyncio
+async def test_update_current_user_profile_duplicate_email(client: AsyncClient) -> None:
+    """Test updating current user profile with duplicate email."""
+    # Register two users
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "duplicate1@example.com",
+            "password": "password123",
+            "name": "User 1",
+        },
+    )
+
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "duplicate2@example.com",
+            "password": "password123",
+            "name": "User 2",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "duplicate2@example.com",
+            "password": "password123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Try to update user2's email to user1's email
+    response = await client.patch(
+        "/api/v1/users/me",
+        json={
+            "email": "duplicate1@example.com",
+        },
+        cookies=cookies,
+    )
+    assert response.status_code == 400
+    assert "already" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_current_user_profile_unauthenticated(client: AsyncClient) -> None:
+    """Test updating current user profile without authentication."""
+    response = await client.patch(
+        "/api/v1/users/me",
+        json={
+            "name": "New Name",
+        },
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_change_password_invalidates_tokens(client: AsyncClient) -> None:
+    """Test that changing password invalidates existing tokens."""
+    # Register and login
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "tokeninvalidate@example.com",
+            "password": "oldpassword123",
+            "name": "Test User",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "tokeninvalidate@example.com",
+            "password": "oldpassword123",
+        },
+    )
+    cookies = login_response.cookies
+
+    # Verify token works
+    me_response = await client.get("/api/v1/users/me", cookies=cookies)
+    assert me_response.status_code == 200
+
+    # Change password
+    await client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "oldpassword123",
+            "new_password": "newpassword123",
+        },
+        cookies=cookies,
+    )
+
+    # Old token should be invalid
+    old_me_response = await client.get("/api/v1/users/me", cookies=cookies)
+    assert old_me_response.status_code == 401

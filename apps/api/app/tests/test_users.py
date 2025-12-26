@@ -34,7 +34,7 @@ async def test_create_user_duplicate_email(client: AsyncClient) -> None:
     )
     assert response.status_code == 400
     data = response.json()
-    assert "already exists" in data["detail"]
+    assert "already" in data["detail"].lower()
 
 
 @pytest.mark.asyncio

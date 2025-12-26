@@ -22,6 +22,15 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(strict=True)
 
 
+class ChangePasswordRequest(BaseModel):
+    """Schema for changing password."""
+
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+    model_config = ConfigDict(strict=True)
+
+
 class TokenResponse(BaseModel):
     """Schema for token response (not used with cookie-based auth, but kept for compatibility)."""
 
