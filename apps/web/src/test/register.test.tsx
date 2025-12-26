@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Route } from "./register";
+import { Route } from "../routes/register";
 
 // Extract component for testing
 const RegisterPage = Route.options.component!;

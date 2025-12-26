@@ -1,19 +1,14 @@
-# 当前任务：RBAC（角色 + 权限）系统落地
+# 当前任务：修复本地 dev 注册失败（RBAC 表未迁移）
 
 ## 当前目标
-实现 RBAC（Role + Permission），后端基于数据库实时加载角色/权限并进行授权校验；前端提供权限 Hook、路由守卫与管理员管理 UI。
+修复 `POST /api/v1/auth/register` 500：确保本地开发数据库已应用 RBAC 相关 Alembic 迁移（创建 `roles/permissions/*_roles/*_permissions` 表），并消除前端 dev 的路由扫描警告。
 
 ## 实施进度
-- ✅ 已完成 RBAC 全链路落地：
-  - 数据模型：Role / Permission + 关联表 + 默认 seed
-  - 后端依赖：`get_current_user` DB 实时加载 roles->permissions；`require_permissions`
-  - RBAC 管理 API：`/api/v1/roles`、`/api/v1/permissions`、`/api/v1/roles/{id}/permissions`
-  - 用户接口权限保护：`/api/v1/users/*` 读写权限点控制（并移除易泄露的缓存装饰器）
-  - types:sync：OpenAPI → orval 已同步（生成 CurrentUserResponse、rbac endpoints）
-  - 前端能力：`usePermission`、route guards、`/forbidden`、`/admin/rbac` 管理页
-  - 测试：后端/前端测试均通过
+- ✅ 已修复 `ADMIN_EMAILS` 空值导致的 Settings 解析崩溃（后端可正常启动）
+- ✅ 已处理：运行迁移后本地数据库已包含 RBAC 表（注册接口已验证不再 500）
+- ✅ 已处理：将 `apps/web/src/routes/*.test.tsx` 移出路由目录，消除 dev 扫描警告（单测已验证通过）
 
 ## 下一步（短期）
-1. 在 `apps/api/.env` 配置 `ADMIN_EMAILS`（逗号分隔），确保首个管理员可进入 `/admin/rbac`。
-2. 按需扩展权限点与“用户角色分配 UI”（当前后端已提供 `PUT /api/v1/users/{user_id}/roles`）。
-3. 若要更细粒度控制：把路由/按钮权限（如 users:write）推广到更多页面与操作。
+1. 运行 `pnpm --filter api migration:upgrade` 将数据库升级到最新迁移（包含 RBAC 表）。
+2. 验证注册接口不再报 `roles` 表不存在（最小化请求验证即可）。
+3. 将 `apps/web/src/routes/login.test.tsx`、`register.test.tsx` 移到非路由目录（例如 `apps/web/src/test/routes/`），消除 dev 警告并保证单测继续通过。
