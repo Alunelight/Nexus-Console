@@ -1,0 +1,22 @@
+---
+description: 前端测试初始化规则（src/test/setup.ts）
+globs: apps/web/src/test/setup.ts
+alwaysApply: false
+---
+
+# Vitest Setup 规则（apps/web/src/test/setup.ts）
+
+本文件用于约束 `src/test/setup.ts` 的修改方式，保证所有 Vitest 测试拥有一致的全局初始化行为。
+
+### 基本约定
+
+- 必须引入 `@testing-library/jest-dom`，以提供更友好的 DOM 断言。
+- 必须在 `afterEach` 做 `@testing-library/react` 的 `cleanup()`：
+  - 防止测试间 DOM 污染导致的串扰与内存泄漏。
+
+### 修改原则
+
+- 避免在此文件加入“会跨测试共享状态”的逻辑（例如单例 store 初始化、全局 mock 的强绑定）。
+- 如需全局 mock（例如 `matchMedia`、`ResizeObserver`）：
+  - 应使用最小实现，并确保不会影响非相关测试。
+- 若可在单测文件内局部 mock 解决，优先局部 mock。

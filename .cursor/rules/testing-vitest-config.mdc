@@ -1,0 +1,26 @@
+---
+description: 前端测试配置规则（vitest.config.ts）
+globs: apps/web/vitest.config.ts
+alwaysApply: false
+---
+
+# Vitest 配置规则（apps/web/vitest.config.ts）
+
+本文件用于约束 `apps/web/vitest.config.ts` 的修改方式，避免破坏测试环境的一致性与稳定性。
+
+## 基本约定
+
+- `test.environment` 固定为 `jsdom`（本项目为 React 组件测试）。
+- `test.setupFiles` 指向 `./src/test/setup.ts`，用于统一注入 `@testing-library/jest-dom` 与清理逻辑。
+- `test.exclude` 需排除：
+  - `**/node_modules/**`、`**/dist/**`、`**/e2e/**`
+- 覆盖率（coverage）：
+  - provider 使用 v8
+  - reporter 保持 `text/json/html/lcov`
+  - `src/api/**` 等生成代码保持排除（避免把 orval 生成物纳入覆盖率考核）
+  - 阈值（thresholds）变更需同步团队共识
+
+## 修改原则
+
+- 只在确有需求时调整 exclude/coverage，避免为了“提高覆盖率数字”而降低阈值或扩大排除范围。
+- 新增别名（alias）或插件时，确保不影响测试环境解析行为（尤其是 `@` 指向 `./src`）。
