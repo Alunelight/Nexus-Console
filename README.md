@@ -99,7 +99,7 @@ cd apps/web && pnpm dev    # 前端: http://localhost:5173
 
 ## 项目结构
 
-```
+```text
 nexus-console/
 ├── apps/
 │   ├── api/              # FastAPI 后端
@@ -109,6 +109,7 @@ nexus-console/
 │   └── web/              # React 前端
 │       ├── src/          # 源代码
 │       └── package.json
+├── .cursor/rules/        # Cursor AI 开发规则
 ├── .kiro/steering/       # AI 开发规则
 ├── package.json
 ├── pnpm-workspace.yaml
@@ -224,17 +225,46 @@ REDIS_URL=redis://host:6379/0
 
 ## 文档
 
+### 核心文档
+
 - [贡献指南](CONTRIBUTING.md) 📝
 - [安全政策](SECURITY.md) 🔒
 - [项目审计报告](docs/PROJECT_AUDIT_REPORT.md) 📊
 - [前后端类型同步](docs/TYPE_SYNC.md) ⭐
 - [后端文档](apps/api/README.md)
 - [前端文档](apps/web/README.md)
+
+### 开发规则与规范
+
 - [技术栈说明](.kiro/steering/tech.md)
 - [项目结构](.kiro/steering/structure.md)
 - [后端开发规则](.kiro/steering/backend-rules.md)
 - [前端开发规则](.kiro/steering/frontend-rules.md)
 - [依赖管理规范](.kiro/steering/dependency-management.md)
+
+### Cursor AI 规则
+
+项目配置了完整的 Cursor AI 开发规则（`.cursor/rules/`），帮助 AI 助手更好地理解项目约定：
+
+**后端规则**：
+
+- `backend-fastapi.mdc` - FastAPI / SQLAlchemy / Pydantic 规则
+- `backend-infra.mdc` - 基础设施与跨切关注点规则
+- `testing-pytest.mdc` - pytest 测试规则
+
+**前端规则**：
+
+- `frontend-react.mdc` - React / TypeScript / TanStack Router 规则
+- `frontend-query-state.mdc` - TanStack Query / Zustand / 表单校验规则
+- `testing-vitest.mdc` - Vitest 测试规则
+- `testing-vitest-config.mdc` - Vitest 配置规则
+- `testing-vitest-setup.mdc` - Vitest 初始化规则
+
+**通用规则**：
+
+- `project-conventions.mdc` - 项目约定与整体协作规则
+- `deps-monorepo.mdc` - Monorepo 依赖管理规则
+- `types-sync.mdc` - 类型同步与 API Client 生成规则
 
 ## License
 
